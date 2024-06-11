@@ -1,14 +1,16 @@
-# Converção dos arquivos que estão em formatos do Windows usando uma imagem base
-FROM ubuntu:20.04 AS dos2unix
-RUN apt-get update && apt-get install -y dos2unix
-WORKDIR /app
-COPY . .
-RUN dos2unix mvnw
+FROM ubuntu:latest AS build
 
-# Instalação do Maven/Java e deploy para a imagem final
-FROM maven:3.8.7-openjdk-18
-WORKDIR /app
-COPY --from=dos2unix /app .
-RUN chmod +x mvnw
+RUN apt-get update
+RUN apt-get install openjdk-17-jdk -y
+COPY . .
+
+RUN apt-get install maven -y
+RUN mvn clean install 
+
+FROM openjdk:17-jdk-slim
+
 EXPOSE 8080
-CMD ["bash", "mvnw", "spring-boot:run"]
+
+COPY --from=build /target/loginapi-0.0.1-SNAPSHOT.jar app.jar
+
+ENTRYPOINT [ "java", "-jar", "app.jar" ]
